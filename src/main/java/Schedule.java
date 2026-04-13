@@ -1,8 +1,6 @@
 import java.util.ArrayList;
 import java.util.HashMap;
 
-
-
 public class Schedule {
     ArrayList<Job> jobList;
 	int completion;
@@ -23,9 +21,27 @@ public class Schedule {
     }
 
 	private ArrayList<Job> kahn(){
-		HashMap<Job, Integer> inDeg = new HashMap<>();
 		ArrayList<Job> ordered = new ArrayList<>();
 
+
+		//insert 0 indegree nodes first
+		for(int i = 0; i < jobList.size(); i++){
+			if(jobList.get(i).kahnDegree == 0){
+				ordered.add(jobList.get(i));
+			}
+		}
+
+		//decrements indegrees and completes ordered list
+		for(int i = 0; i < ordered.size(); i++){
+			for(int j = 0; j < ordered.get(i).edgeList.size(); j++){
+				Job outjob = ordered.get(i).edgeList.get(j);
+				if((--outjob.kahnDegree) <= 0 ){
+					ordered.add(outjob);
+				}
+			}
+		}
+
+		/*
 		//initialize indegree list
 		for(int i = 0; i < jobList.size(); i++){
 			inDeg.put(jobList.get(i), 0);
@@ -59,11 +75,9 @@ public class Schedule {
 				}
 			}
 		}
-		if(ordered.size() != jobList.size()){
-			for(Job job : inDeg.keySet()){
-				job.cycle = true;
-			}
-		}
+
+		 */
+
 		return ordered;
 
 	}
@@ -95,17 +109,24 @@ public class Schedule {
         int sTime;
         int fTime;
 		final int time;
+		int indegree;
+		int kahnDegree;
 		boolean cycle;
 		ArrayList<Job> edgeList;
+
         private Job(int time){
             sTime = 0;
             fTime = 0;
 			this.time = time;
+			indegree = 0;
+			kahnDegree = 0;
 			cycle = false;
 			edgeList = new ArrayList<>();
         }
         public void requires(Job j){
             j.edgeList.add(this);
+			indegree++;
+			kahnDegree++;
 			dag();
         }
         public int start(){
@@ -114,6 +135,7 @@ public class Schedule {
 		private void resetTime(){
 			sTime = 0;
 			fTime = time;
+			kahnDegree = indegree;
 		}
     }
 }
