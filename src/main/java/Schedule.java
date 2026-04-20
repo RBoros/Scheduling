@@ -3,27 +3,43 @@ import java.util.ArrayList;
 public class Schedule {
     ArrayList<Job> jobList;
 	int completion;
+    boolean rerun;
     public Schedule(){
 		jobList = new ArrayList<>();
 		completion = 0;
+        rerun = true;
     }
+    //constant time
     public Job insert(int time){
         jobList.add(new Job(time));
+        rerun = true;
         return get(jobList.size()-1);
     }
+    //constant time
     public Job get(int index){
         return jobList.get(index);
     }
+
     public int finish(){
-		dag();
+        if(rerun){
+            rerun = false;
+            dag();
+        }
 		return completion;
     }
+    //V + (V*E) time
 
-	private ArrayList<Job> kahn(){
+    /**
+     * Runs Kahn's algorithm then
+     * relaxes edges in order in ordered list
+     *
+     * 0(V + (V*E)) time complexity
+     */
+	private void dag(){
 		ArrayList<Job> ordered = new ArrayList<>();
 
 		//insert 0 indegree nodes first
-		//also resets all variables
+		//resets all variables
 		for(int i = 0; i < jobList.size(); i++){
 			Job jobber = jobList.get(i);
 			jobber.reset();
@@ -32,36 +48,25 @@ public class Schedule {
 			}
 		}
 
-		//decrements indegrees and completes ordered list
+		//decrements indegrees and adds to ordered
+        //relaxes start and finish times
+        int m = 0;
 		for(int i = 0; i < ordered.size(); i++){
+            Job u = ordered.get(i);
+            u.fTime = u.sTime + u.time;
 			for(int j = 0; j < ordered.get(i).edgeList.size(); j++){
-				Job outjob = ordered.get(i).edgeList.get(j);
-				if((--outjob.kahnDegree) <= 0 ){
-					ordered.add(outjob);
+				Job v = u.edgeList.get(j);
+                v.sTime = Math.max(u.fTime, v.sTime);
+				if((--v.kahnDegree) <= 0 ){
+					ordered.add(v);
 				}
 			}
+            m = Math.max(m, u.fTime);
 		}
+        completion = (ordered.size() != jobList.size())
+                ? -1
+                : m;
 
-		return ordered;
-
-	}
-	private void dag(){
-		//start topological sort using kahn's
-		ArrayList<Job> schedList = kahn();
-
-		int m = 0;
-		for(int i = 0; i < schedList.size(); i++){
-			Job u = schedList.get(i);
-			u.fTime = u.sTime + u.time;
-			for(int j = 0; j < schedList.get(i).edgeList.size(); j++){
-				Job v = schedList.get(i).edgeList.get(j);
-				v.sTime = Math.max(u.fTime, v.sTime);
-			}
-			m = Math.max(m, u.fTime);
-		}
-		completion = (schedList.size() != jobList.size())
-				? -1
-				: m;
 	}
 
     class Job{
@@ -82,10 +87,14 @@ public class Schedule {
         }
         public void requires(Job j){
             j.edgeList.add(this);
+            rerun = true;
 			indegree++;
         }
         public int start(){
-			dag();
+            if(rerun){
+                rerun = false;
+                dag();
+            }
 			sTime = (kahnDegree != 0) ? -1 : sTime;
 			return sTime;
 		}
